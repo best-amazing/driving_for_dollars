@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkipTrace Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --secondary-gradient: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+            --success-gradient: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --dark-bg: #0f172a;
+            --darker-bg: #020617;
+            --card-bg: #1e293b;
+            --card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #334155;
+            --border-radius: 12px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.3);
+            --shadow-hover: 0 16px 48px rgba(0,0,0,0.4);
+            --glow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--dark-bg);
+            background-image:
+                radial-gradient(circle at 25% 25%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 119, 198, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--dark-bg) 0%, var(--darker-bg) 100%);
+        }
+
+        .hero-section {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 4rem 0 3rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.1;
+        }
+
+        .hero-section .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-container {
+            max-width: 1100px;
+            margin: -2rem auto 0;
+            padding: 3rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.8);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .instructions {
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+            border: none;
+            border-left: 4px solid #38b2ac;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .instructions h4 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .instructions ol {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 30px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+            border: none;
+            border-radius: 12px;
+            color: #4a5568;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #cbd5e0 0%, #a0aec0 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success-gradient);
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.6);
+        }
+
+        .btn-danger {
+            background: var(--secondary-gradient);
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 87, 108, 0.6);
+        }
+
+        .form-control {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .cost-estimator {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .cost-estimator h5 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .cost-estimator p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .cost-estimator ul {
+            color: var(--text-primary);
+            padding-left: 1.2rem;
+        }
+
+        .cost-estimator li {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .cost-estimator li:last-child {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .progress-container {
+            margin-top: 2rem;
+            display: none;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e2e8f0;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            background: var(--primary-gradient);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        #resultsTable {
+            margin-top: 2rem;
+            display: none;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+
+        #cancelBtn {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        #downloadBtn {
+            margin-top: 1rem;
+        }
+
+        .status-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.8) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-message {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background: rgba(99, 102, 241, 0.05);
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .status-message:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .status-message strong {
+            color: #6366f1;
+            font-weight: 600;
+        }
+
+        .status-message a {
+            color: #06b6d4;
+            text-decoration: none;
+        }
+
+        .status-message a:hover {
+            text-decoration: underline;
+        }
+
+        .stats-container {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            border: 1px solid rgba(79, 172, 254, 0.2);
+        }
+
+        .stats-container h5 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.8);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .url-link {
+            font-size: 0.85rem;
+            color: #667eea;
+            word-break: break-all;
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .url-link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .table thead th {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85rem;
+        }
+
+        .table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8fafc;
+            transform: scale(1.01);
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .alert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+        }
+
+        .display-4 {
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .h3 {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 2rem 0;
+            }
+
+            .upload-container {
+                margin: -1rem auto 0;
+                padding: 2rem 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200px 0;
+            }
+            100% {
+                background-position: calc(200px + 100%) 0;
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.6s ease-out;
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.6s ease-out;
+        }
+
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            background-size: 200px 100%;
+            animation: shimmer 2s infinite;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-animated {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-animated::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Navigation */
+        .navbar-brand {
+            font-size: 1.25rem;
+        }
+
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: #6366f1 !important;
+        }
+
+        /* Hero Section */
+        .tool-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .dashboard-preview {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255,255,255,0.15);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Sidebar */
+        .sidebar-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .guide-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid #6366f1;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: var(--text-secondary);
+            color: var(--card-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .step.active .step-number {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .step-content h6 {
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        .step-content p {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: rgba(99, 102, 241, 0.02);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone:hover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-content h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-content p {
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .upload-zone:hover .upload-icon {
+            color: #6366f1;
+            transform: scale(1.1);
+        }
+
+        /* File Info */
+        .file-info {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .file-details {
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+        }
+
+        .file-size {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Tool Header */
+        .tool-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tool-title {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .tool-subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* Button Enhancements */
+        .btn-outline-light {
+            border-color: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--dark-bg);
+        }
+
+        /* ZenRow Credits Display Styles */
+        #creditsNav {
+            margin-right: 1rem;
+        }
+
+        #creditsDisplay {
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        #creditsDisplay:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        #creditsDisplay.credits-low {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.5);
+            color: #f59e0b !important;
+        }
+
+        #creditsDisplay.credits-exhausted {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #ef4444 !important;
+        }
+
+        #creditsDisplay.credits-ok {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #10b981 !important;
+        }
+
+        .credits-tooltip {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            min-width: 200px;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            display: none;
+        }
+
+        .credits-tooltip.show {
+            display: block;
+        }
+
+        .credits-tooltip h6 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .credits-tooltip p {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+
+        .credits-progress {
+            height: 6px;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .credits-progress-bar {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .hero-section .row {
+                text-align: center;
+            }
+
+            .dashboard-preview {
+                margin-top: 2rem;
+            }
+
+            .sidebar-card {
+                margin-bottom: 2rem;
+            }
+
+            .col-lg-3, .col-lg-9 {
+                margin-bottom: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .upload-zone {
+                padding: 2rem 1rem;
+            }
+
+            .tool-title {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- App Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: var(--card-bg); border-bottom: 1px solid var(--border-color);">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <i class="fas fa-search me-2" style="color: #6366f1; font-size: 1.5rem;"></i>
+                <span class="fw-bold">SkipTrace Pro</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- ZenRow Credits Display -->
+                    <li class="nav-item" id="creditsNav">
+                        <a class="nav-link d-flex align-items-center" href="#" id="creditsDisplay">
+                            <i class="fas fa-coins me-1"></i>
+                            <span id="creditsText">Loading...</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <i class="fas fa-upload me-1"></i>Upload
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/downloads">
+                            <i class="fas fa-history me-1"></i>Jobs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-cog me-1"></i>Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero/Dashboard Section -->
+    <div class="hero-section fade-in-up">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="tool-icon me-3">
+                            <i class="fas fa-search-location"></i>
+                        </div>
+                        <div>
+                            <h1 class="display-5 fw-bold mb-0">Property Data Scraper</h1>
+                            <p class="text-white-50 mb-0">Professional SkipTrace Tool</p>
+                        </div>
+                    </div>
+                    <p class="lead mb-4">Extract property owner information from TruePeopleSearch with advanced scraping technology. Process CSV files and get comprehensive contact data instantly.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#upload" class="btn btn-light btn-lg">
+                            <i class="fas fa-play me-2"></i>Start Scraping
+                        </a>
+                        <a href="/downloads" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-history me-2"></i>View Results
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="dashboard-preview">
+                        <div class="stats-overview">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number">10,000+</div>
+                                    <div class="stat-label">Addresses Processed</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number">95%</div>
+                                    <div class="stat-label">Success Rate</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-number">50K+</div>
+                                    <div class="stat-label">Contacts Found</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-5">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <div class="sidebar-card slide-in-left">
+                    <h5 class="sidebar-title">
+                        <i class="fas fa-info-circle me-2"></i>Quick Start Guide
+                    </h5>
+                    <div class="guide-steps">
+                        <div class="step active">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h6>Prepare Your Data</h6>
+                                <p>Upload CSV with property addresses</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h6>AI Processing</h6>
+                                <p>Advanced scraping algorithms</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h6>Get Results</h6>
+                                <p>Download complete contact data</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CSV Format Example -->
+                <div class="sidebar-card slide-in-left" style="animation-delay: 0.1s;">
+                    <h5 class="sidebar-title">
+                        <i class="fas fa-file-csv me-2"></i>CSV Format Example
+                    </h5>
+                    <div class="csv-example" style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.75rem; overflow-x: auto;">
+                        <code style="color: #a5b4fc;">
+Address,City,State,Zip,Owner Name<br>
+123 Main St,Columbus,OH,43215,John Smith<br>
+456 Oak Ave,Cleveland,OH,44102,Jane Doe<br>
+789 Elm St,Cincinnati,OH,45202,
+                        </code>
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-outline-light" onclick="downloadSampleCSV()">
+                            <i class="fas fa-download me-1"></i>Download Sample CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- How It Works -->
+                <div class="sidebar-card slide-in-left" style="animation-delay: 0.2s;">
+                    <h5 class="sidebar-title">
+                        <i class="fas fa-cogs me-2"></i>How It Works
+                    </h5>
+                    <div class="how-it-works" style="font-size: 0.85rem;">
+                        <div class="mb-3">
+                            <strong style="color: #6366f1;"><i class="fas fa-user-check me-1"></i>With Owner Name:</strong>
+                            <p class="text-secondary mb-0">Searches by name + location. Returns ALL matching profiles without address filtering.</p>
+                        </div>
+                        <div class="mb-3">
+                            <strong style="color: #ec4899;"><i class="fas fa-map-marker-alt me-1"></i>Without Owner Name:</strong>
+                            <p class="text-secondary mb-0">Searches by address only. Only returns profiles where current address matches searched address.</p>
+                        </div>
+                        <div>
+                            <strong style="color: #06b6d4;"><i class="fas fa-expand-arrows-alt me-1"></i>Address Expansion:</strong>
+                            <p class="text-secondary mb-0">Addresses like "100-200 Main St" are expanded into individual addresses (100, 101, 102... 200).</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Restrictions -->
+                <div class="sidebar-card slide-in-left" style="animation-delay: 0.3s; border-left: 3px solid #f59e0b;">
+                    <h5 class="sidebar-title" style="color: #f59e0b;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Restrictions
+                    </h5>
+                    <ul style="font-size: 0.85rem; padding-left: 1.2rem; color: var(--text-secondary); margin: 0;">
+                        <li class="mb-2"><strong>Address, City, State</strong> are required fields</li>
+                        <li class="mb-2">Empty <strong>Owner Name</strong> = address-only search with strict matching</li>
+                        <li class="mb-2">Profiles with mismatched addresses are <strong>skipped</strong> (address-only mode)</li>
+                        <li class="mb-2">Already scraped URLs are <strong>deduplicated</strong> globally</li>
+                        <li>Maximum file size: <strong>16MB</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Upload Area -->
+            <div class="col-lg-9">
+                <div class="upload-container slide-in-right" id="upload">
+                    <div class="tool-header">
+                        <h3 class="tool-title">
+                            <i class="fas fa-file-upload me-2"></i>CSV Upload & Processing
+                        </h3>
+                        <p class="tool-subtitle">Upload your property data and let our AI-powered scraper do the work</p>
+                    </div>
+
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label for="platformSelect" class="form-label fw-bold">
+                                <i class="fas fa-globe me-2"></i>Select Platform to Scrape From
+                            </label>
+                            <select class="form-select form-select-lg" id="platformSelect" name="platform" required>
+                                <option value="">Choose a platform...</option>
+                                <option value="truepeoplesearch">TruePeopleSearch.com</option>
+                                <option value="nationalpublicdata">NationalPublicData.com</option>
+                            </select>
+                            <div class="form-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Choose the data source for your skip tracing. Each platform has different coverage and data quality.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="upload-zone" id="uploadZone">
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <h4>Drop your CSV file here</h4>
+                                <p>or <span class="text-primary">browse files</span></p>
+                                <input class="form-control d-none" type="file" id="csvFile" name="file" accept=".csv" required>
+                            </div>
+                        </div>
+
+                        <div class="file-info mt-3" id="fileInfo" style="display: none;">
+                            <div class="file-details">
+                                <i class="fas fa-file-csv me-2"></i>
+                                <span id="fileName"></span>
+                                <span class="file-size ms-2" id="fileSize"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="fas fa-rocket me-2"></i>
+                                <span id="btnText">Start Scraping Process</span>
+                                <span id="btnSpinner" class="loading-spinner" style="display: none;"></span>
+                            </button>
+                        </div>
+                    </form>
+
+            <div class="progress-container" id="progressContainer">
+                <h4 class="text-center">Processing...</h4>
+                <div class="progress mb-3">
+                    <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <p id="progressText" class="text-center">Starting...</p>
+
+                <div class="stats-container" id="statsContainer">
+                    <h5>Current Statistics</h5>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="statAddresses">0</div>
+                            <div class="stat-label">Addresses Processed</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statPeople">0</div>
+                            <div class="stat-label">People Found</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statPhones">0</div>
+                            <div class="stat-label">Phone Numbers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statEmails">0</div>
+                            <div class="stat-label">Email Addresses</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-messages" id="statusMessages">
+                    <!-- Status messages will be added here -->
+                </div>
+
+                <button id="cancelBtn" class="btn btn-danger">Cancel Processing</button>
+            </div>
+
+            <div id="errorAlert" class="alert alert-danger mt-3" style="display: none;"></div>
+            <div id="successAlert" class="alert alert-success mt-3" style="display: none;"></div>
+
+            <div class="cost-estimator">
+                <h5>Cost Estimation</h5>
+                <p>Using Zenrows API for scraping:</p>
+                <ul>
+                    <li>Each address search uses 1 API credit</li>
+                    <li>Each person detail page uses 1 API credit</li>
+                    <li>Estimated cost: <span id="costEstimate">0</span> credits for this search</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="resultsTable" class="mt-4">
+            <h3>Real-Time Results</h3>
+            <button id="exportBtn" class="btn btn-secondary mb-2">Export Table to CSV</button>
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Phone Number(s)</th>
+                        <th>Property Address</th>
+                        <th>URL</th>
+                    </tr>
+                </thead>
+                <tbody id="realTimeResultsBody">
+                    <!-- Real-time results will be appended here -->
+                </tbody>
+            </table>
+            <button id="downloadBtn" class="btn btn-success">Download Full Results File</button>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let jobId = null;
+        let stats = {
+            addresses_processed: 0,
+            people_found: 0,
+            phones_found: 0,
+            emails_found: 0,
+            addresses_found: 0
+        };
+
+        // UI Elements
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const errorElement = document.getElementById('errorAlert');
+        const successElement = document.getElementById('successAlert');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const resultsTable = document.getElementById('resultsTable');
+        const realTimeResultsBody = document.getElementById('realTimeResultsBody');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const statusMessages = document.getElementById('statusMessages');
+        const exportBtn = document.getElementById('exportBtn');
+        const uploadBtn = document.querySelector('#uploadForm button[type="submit"]');
+        const csvFileInput = document.getElementById('csvFile');
+
+        function resetUI() {
+            progressContainer.style.display = 'none';
+            errorElement.style.display = 'none';
+            successElement.style.display = 'none';
+            cancelBtn.style.display = 'none';
+            resultsTable.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            exportBtn.style.display = 'none';
+            realTimeResultsBody.innerHTML = '';
+            statusMessages.innerHTML = '';
+            progressBar.style.width = '0%';
+            progressBar.setAttribute('aria-valuenow', 0);
+            progressText.textContent = 'Starting...';
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('statAddresses').textContent = stats.addresses_processed;
+            document.getElementById('statPeople').textContent = stats.people_found;
+            document.getElementById('statPhones').textContent = stats.phones_found;
+            document.getElementById('statEmails').textContent = stats.emails_found;
+            const totalCredits = stats.addresses_processed + stats.people_found;
+            document.getElementById('costEstimate').textContent = totalCredits;
+        }
+
+        function closeEventSource() {
+            try {
+                if (eventSource) {
+                    eventSource.close();
+                }
+            } catch (e) {
+                console.warn('Failed to close existing EventSource', e);
+            } finally {
+                eventSource = null;
+            }
+        }
+
+        function listenToJobStream(currentJobId) {
+            jobId = currentJobId;
+
+            // ensure we don't open duplicate EventSource
+            if (eventSource) {
+                closeEventSource();
+            }
+
+            eventSource = new EventSource(`/stream/${jobId}`);
+
+            eventSource.onmessage = function(event) {
+                // safe-guard: ignore empty or malformed messages
+                if (!event || !event.data) return;
+
+                let data;
+                try {
+                    data = JSON.parse(event.data);
+                } catch (err) {
+                    console.warn('Failed to parse SSE data', err);
+                    return;
+                }
+
+                // ignore server heartbeats
+                if (data.type === 'heartbeat') return;
+
+                if (data.type === 'progress') {
+                    const progress = (data.current / data.total) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.setAttribute('aria-valuenow', progress);
+                    progressText.textContent = `Processing ${data.current} of ${data.total}: ${data.address}`;
+                    if (data.stats) {
+                        stats = data.stats;
+                        updateStatsDisplay();
+                    }
+                } else if (data.type === 'status') {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'status-message';
+                    messageDiv.innerHTML = data.message + (data.url ? `<br><small class="url-link"><a href="${data.url}" target="_blank">${data.url}</a></small>` : '');
+                    statusMessages.appendChild(messageDiv);
+                    statusMessages.scrollTop = statusMessages.scrollHeight;
+                } else if (data.type === 'details') {
+                    // ensure table visible
+                    resultsTable.style.display = 'block';
+                    console.log('Adding real-time result:', data.data);
+
+                    const newRow = realTimeResultsBody.insertRow();
+                    newRow.innerHTML = `
+                        <td>${data.data.first_name || ''}</td>
+                        <td>${data.data.last_name || ''}</td>
+                        <td>${(data.data.phones || []).join(', ')}</td>
+                        <td>${data.data.full_address || data.data.current_address || ''}</td>
+                        <td><a href="${data.data.url}" target="_blank" class="url-link">View Profile</a></td>
+                    `;
+                } else if (data.type === 'complete' || data.type === 'cancelled') {
+                    // job finished
+                    closeEventSource();
+                    progressText.textContent = data.message;
+                    cancelBtn.style.display = 'none';
+                    successElement.innerHTML = `<strong>${data.message}</strong>`;
+                    successElement.style.display = 'block';
+                    uploadBtn.disabled = false;
+                    csvFileInput.value = ''; // reset file input
+                } else if (data.type === 'error') {
+                    closeEventSource();
+                    errorElement.textContent = data.message;
+                    errorElement.style.display = 'block';
+                    cancelBtn.style.display = 'none';
+                    uploadBtn.disabled = false;
+                }
+            };
+
+            // softer error handling: let EventSource attempt automatic reconnects
+            eventSource.onerror = function(err) {
+                console.warn('SSE connection error (will attempt to reconnect):', err);
+                // optional UI hint (non-blocking)
+                // errorElement.textContent = 'Connection interrupted — retrying...';
+                // errorElement.style.display = 'block';
+            };
+        }
+
+        async function checkJobStatus(jobIdToCheck) {
+            try {
+                const response = await fetch(`/status/${jobIdToCheck}`);
+                if (!response.ok) {
+                    localStorage.removeItem('jobId');
+                    return;
+                }
+                const status = await response.json();
+
+                // Restore UI state
+                progressContainer.style.display = 'block';
+                resultsTable.style.display = 'block';
+                downloadBtn.style.display = 'block';
+                exportBtn.style.display = 'block';
+
+                stats = status.stats;
+                updateStatsDisplay();
+
+                const progress = status.total_rows > 0 ? (status.current_row / status.total_rows) * 100 : 0;
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressText.textContent = `Processing ${status.current_row} of ${status.total_rows}`;
+
+                if (status.active && !status.cancelled) {
+                    cancelBtn.style.display = 'block';
+                    listenToJobStream(jobIdToCheck);
+                    uploadBtn.disabled = true;
+                } else {
+                    cancelBtn.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    if (status.cancelled) {
+                        progressText.textContent = 'Processing was cancelled.';
+                    } else {
+                        progressText.textContent = 'Processing complete.';
+                        successElement.innerHTML = `<strong>Processing completed successfully</strong>`;
+                        successElement.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error("Error checking job status:", error);
+                localStorage.removeItem('jobId');
+            }
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const platformSelect = document.getElementById('platformSelect');
+            if (!platformSelect.value) {
+                errorElement.textContent = 'Please select a platform to scrape from.';
+                errorElement.style.display = 'block';
+                return;
+            }
+
+            if (!csvFileInput.files || csvFileInput.files.length === 0) {
+                errorElement.textContent = 'Please select a CSV file.';
+                errorElement.style.display = 'block';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', csvFileInput.files[0]);
+            formData.append('platform', platformSelect.value);
+
+            resetUI();
+
+            // Show loading state
+            document.getElementById('btnText').textContent = 'Processing...';
+            document.getElementById('btnSpinner').style.display = 'inline-block';
+            uploadBtn.disabled = true;
+
+            // Add fade-in animation to progress container
+            setTimeout(() => {
+                progressContainer.style.display = 'block';
+                progressContainer.classList.add('fade-in');
+                cancelBtn.style.display = 'block';
+                cancelBtn.classList.add('fade-in');
+            }, 300);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(()=>({error:'Invalid response from server'}));
+                    throw new Error(errorData.error || 'Failed to start processing');
+                }
+
+                const data = await response.json();
+                jobId = data.job_id;
+                localStorage.setItem('jobId', jobId);
+
+                // Reset button state
+                document.getElementById('btnText').textContent = 'Process SkipTrace';
+                document.getElementById('btnSpinner').style.display = 'none';
+
+                // Show download and export buttons with animation
+                setTimeout(() => {
+                    downloadBtn.style.display = 'block';
+                    exportBtn.style.display = 'block';
+                    resultsTable.style.display = 'block';
+                    downloadBtn.classList.add('fade-in');
+                    exportBtn.classList.add('fade-in');
+                    resultsTable.classList.add('fade-in');
+                }, 500);
+
+                listenToJobStream(jobId);
+
+            } catch (error) {
+                errorElement.textContent = 'Error: ' + error.message;
+                errorElement.style.display = 'block';
+                errorElement.classList.add('fade-in');
+                progressContainer.style.display = 'none';
+                uploadBtn.disabled = false;
+                document.getElementById('btnText').textContent = 'Process SkipTrace';
+                document.getElementById('btnSpinner').style.display = 'none';
+            }
+        });
+
+        document.getElementById('cancelBtn').addEventListener('click', function() {
+            if (jobId) {
+                fetch('/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ job_id: jobId })
+                });
+            }
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const currentJobId = jobId || localStorage.getItem('jobId');
+            if (currentJobId) {
+                window.location.href = `/download/${currentJobId}`;
+            }
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            const table = document.querySelector("#resultsTable table");
+            let csv = [];
+            const rows = table.querySelectorAll("tr");
+
+            for (const row of rows) {
+                const rowData = [];
+                for (const cell of row.querySelectorAll("th, td")) {
+                    rowData.push(`"${cell.textContent.replace(/"/g, '""')}"`);
+                }
+                csv.push(rowData.join(','));
+            }
+
+            const csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "real_time_results.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Drag and drop functionality
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('csvFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        // Handle file selection
+        function handleFileSelect(file) {
+            if (file && (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv'))) {
+                // Create a new DataTransfer to properly set the file input
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                updateFileInfo(file);
+            } else {
+                alert('Please select a valid CSV file.');
+            }
+        }
+
+        // Update file information display
+        function updateFileInfo(file) {
+            fileName.textContent = file.name;
+            fileSize.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+            fileInfo.style.display = 'block';
+            console.log('File selected:', file.name, file.size + ' bytes');
+        }
+
+        // Upload zone click to browse files
+        uploadZone.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        // File input change
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        // Drag and drop events
+        uploadZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        // ZenRow Credits Functions
+        async function fetchZenRowCredits() {
+            const creditsDisplay = document.getElementById('creditsDisplay');
+            const creditsText = document.getElementById('creditsText');
+
+            try {
+                const response = await fetch('/api/credits');
+                const data = await response.json();
+
+                if (data.error) {
+                    creditsText.textContent = 'Error';
+                    creditsDisplay.className = 'nav-link d-flex align-items-center credits-exhausted';
+                    creditsDisplay.title = data.error;
+                    return;
+                }
+
+                // Handle "Unknown" credits - show dashboard link
+                if (data.credits === 'Unknown' || data.credits === undefined) {
+                    creditsText.textContent = 'Check Dashboard';
+                    creditsDisplay.className = 'nav-link d-flex align-items-center credits-ok';
+                    creditsDisplay.title = 'Unable to fetch credits - Click to check ZenRows dashboard';
+                    creditsDisplay.href = 'https://www.zenrows.com/dashboard';
+                    creditsDisplay.target = '_blank';
+
+                    // Store credits data for later use
+                    window.zenrowCredits = { credits: 'Unknown', limit: 'Unknown', percentage: 100 };
+                    return;
+                }
+
+                const credits = data.credits || 0;
+                const limit = data.limit || 0;
+                const percentage = data.percentage_remaining || 0;
+
+                // Update display text
+                creditsText.textContent = `${credits.toLocaleString()} credits`;
+
+                // Remove target attribute if it was set
+                creditsDisplay.removeAttribute('target');
+                creditsDisplay.removeAttribute('href');
+
+                // Update styling based on remaining credits
+                creditsDisplay.classList.remove('credits-ok', 'credits-low', 'credits-exhausted');
+
+                if (credits <= 0) {
+                    creditsDisplay.classList.add('credits-exhausted');
+                    creditsDisplay.title = 'ZenRow credits exhausted! Please add more credits.';
+                } else if (percentage < 10) {
+                    creditsDisplay.classList.add('credits-low');
+                    creditsDisplay.title = `Low credits: ${credits.toLocaleString()} remaining (${percentage}%)`;
+                } else if (percentage < 25) {
+                    creditsDisplay.classList.add('credits-low');
+                    creditsDisplay.title = `Credits running low: ${credits.toLocaleString()} remaining (${percentage}%)`;
+                } else {
+                    creditsDisplay.classList.add('credits-ok');
+                    creditsDisplay.title = `Credits OK: ${credits.toLocaleString()} / ${limit.toLocaleString()} (${percentage}%)`;
+                }
+
+                // Store credits data for later use
+                window.zenrowCredits = { credits, limit, percentage };
+
+            } catch (error) {
+                console.error('Error fetching ZenRow credits:', error);
+                creditsText.textContent = 'Error';
+                creditsDisplay.title = 'Failed to fetch credits';
+            }
+        }
+
+        // Check credits before starting a job
+        function checkCreditsBeforeStart() {
+            const credits = window.zenrowCredits;
+            if (credits && credits.credits <= 0) {
+                return false;
+            }
+            return true;
+        }
+
+        // On page load, check for an existing job and fetch credits
+        window.onload = function() {
+            const existingJobId = localStorage.getItem('jobId');
+            if (existingJobId) {
+                checkJobStatus(existingJobId);
+            }
+
+            // Fetch ZenRow credits
+            fetchZenRowCredits();
+
+            // Refresh credits every 5 minutes
+            setInterval(fetchZenRowCredits, 5 * 60 * 1000);
+        };
+
+        // Download sample CSV function
+        function downloadSampleCSV() {
+            const sampleCSV = `Address,City,State,Zip,County,Owner Name
+123 Main St,Columbus,OH,43215,Franklin,John Smith
+456 Oak Avenue,Cleveland,OH,44102,Cuyahoga,Robert Johnson
+789 Elm Street,Cincinnati,OH,45202,Hamilton,Michael Williams
+321 Maple Drive,Dayton,OH,45402,Montgomery,David Brown
+654 Pine Lane,Akron,OH,44308,Summit,James Davis
+987 Cedar Court,Toledo,OH,43604,Lucas,William Miller
+147 Birch Road,Canton,OH,44702,Stark,Richard Wilson
+258 Walnut Street,Youngstown,OH,44503,Mahoning,Joseph Taylor
+369 Cherry Boulevard,Springfield,OH,45502,Clark,Charles Anderson
+741 Spruce Way,Hamilton,OH,45011,Butler,Thomas Thomas`;
+
+            const blob = new Blob([sampleCSV], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sample_skiptrace_data.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Results - {{ job_id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --excel-header-bg: #217346;
+            --excel-row-alt: #f8f9fa;
+            --excel-border: #dee2e6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .hero-section {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .stats-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .excel-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .excel-toolbar {
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--excel-border);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border: 1px solid var(--excel-border);
+            border-radius: 8px;
+            width: 250px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .results-table-wrapper {
+            max-height: 60vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 0;
+        }
+
+        .results-table thead th {
+            background: var(--excel-header-bg);
+            color: white;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border: none;
+            white-space: nowrap;
+        }
+
+        .results-table thead th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background: #1a5c38;
+        }
+
+        .results-table tbody tr:nth-child(even) {
+            background-color: var(--excel-row-alt);
+        }
+
+        .results-table tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        .results-table tbody td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--excel-border);
+            border-right: 1px solid var(--excel-border);
+            font-size: 0.9rem;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .results-table tbody td:first-child {
+            position: sticky;
+            left: 0;
+            background: inherit;
+            font-weight: 600;
+            z-index: 5;
+        }
+
+        .results-table tbody tr:hover td:first-child {
+            background: #e3f2fd;
+        }
+
+        .row-number {
+            background: #f8f9fa !important;
+            color: #6c757d;
+            font-size: 0.8rem !important;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        .btn-download {
+            background: var(--success-gradient);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+            color: white;
+        }
+
+        .btn-excel {
+            background: var(--excel-header-bg);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-excel:hover {
+            background: #1a5c38;
+            color: white;
+        }
+
+        .btn-back {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+
+        .pagination-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .highlight {
+            background-color: #fff3cd;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .no-results i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .search-box input {
+                width: 100%;
+            }
+
+            .excel-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .toolbar-left, .toolbar-right {
+                justify-content: center;
+            }
+
+            .results-table tbody td {
+                max-width: 150px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4"><i class="bi bi-file-earmark-spreadsheet me-3"></i>Job Results</h1>
+            <p class="lead">Results for job: <strong>{{ job_id }}</strong></p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="row">
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalRows">{{ rows|length }}</div>
+                        <div class="stat-label">Total Rows</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalCols">{{ headers|length }}</div>
+                        <div class="stat-label">Columns</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value" id="phonesFound">-</div>
+                        <div class="stat-label">Phone Numbers</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="stat-item">
+                        <div class="stat-value" id="emailsFound">-</div>
+                        <div class="stat-label">Emails</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Excel-like Container -->
+        <div class="excel-container">
+            <div class="excel-toolbar">
+                <div class="toolbar-left">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="searchInput" placeholder="Search in results...">
+                    </div>
+                    <div class="pagination-info">
+                        <span id="showingInfo">Showing all {{ rows|length }} rows</span>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-excel" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
+                    </button>
+                    <a href="/download/{{ job_id }}" class="btn btn-download">
+                        <i class="bi bi-download me-2"></i>Download CSV
+                    </a>
+                </div>
+            </div>
+
+            <div class="results-table-wrapper" id="tableWrapper">
+                {% if headers and rows %}
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th class="row-number">#</th>
+                                {% for header in headers %}
+                                    <th>{{ header }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            {% for row in rows %}
+                                <tr>
+                                    <td class="row-number">{{ loop.index }}</td>
+                                    {% for cell in row %}
+                                        <td>{{ cell }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="no-results">
+                        <i class="bi bi-inbox"></i>
+                        <h4>No results available for this job</h4>
+                        <p>Try uploading a new file to process.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="text-center mt-4 mb-4">
+            <a href="/downloads" class="btn btn-back me-2">
+                <i class="bi bi-arrow-left me-2"></i>Back to All Jobs
+            </a>
+            <a href="/" class="btn btn-secondary">
+                <i class="bi bi-upload me-2"></i>Upload New File
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Calculate stats
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('resultsTable');
+            if (!table) return;
+
+            let phoneCount = 0;
+            let emailCount = 0;
+
+            // Count phones and emails
+            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.toLowerCase());
+            const phoneColIndex = headers.findIndex(h => h.includes('phone'));
+            const emailColIndex = headers.findIndex(h => h.includes('email'));
+
+            if (phoneColIndex >= 0 || emailColIndex >= 0) {
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (phoneColIndex >= 0 && cells[phoneColIndex]) {
+                        const phoneText = cells[phoneColIndex].textContent;
+                        phoneCount += (phoneText.match(/\d{10}/g) || []).length;
+                    }
+                    if (emailColIndex >= 0 && cells[emailColIndex]) {
+                        const emailText = cells[emailColIndex].textContent;
+                        emailCount += (emailText.match(/@/g) || []).length;
+                    }
+                });
+            }
+
+            document.getElementById('phonesFound').textContent = phoneCount || '-';
+            document.getElementById('emailsFound').textContent = emailCount || '-';
+        });
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const tableBody = document.getElementById('tableBody');
+            const rows = tableBody.querySelectorAll('tr');
+            let visibleCount = 0;
+
+            rows.forEach((row, index) => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    row.style.display = '';
+                    visibleCount++;
+
+                    // Highlight matching text
+                    if (searchTerm.length > 0) {
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach(cell => {
+                            const originalText = cell.textContent;
+                            const regex = new RegExp(`(${searchTerm})`, 'gi');
+                            if (originalText.toLowerCase().includes(searchTerm)) {
+                                cell.innerHTML = originalText.replace(regex, '<span class="highlight">$1</span>');
+                            }
+                        });
+                    } else {
+                        // Remove highlights
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach(cell => {
+                            cell.innerHTML = cell.textContent;
+                        });
+                    }
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            document.getElementById('showingInfo').textContent =
+                searchTerm.length > 0
+                    ? `Showing ${visibleCount} of ${rows.length} rows`
+                    : `Showing all ${rows.length} rows`;
+        });
+
+        // Export to Excel (CSV with BOM for Excel compatibility)
+        function exportToExcel() {
+            const table = document.getElementById('resultsTable');
+            if (!table) return;
+
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('th, td');
+                const rowData = [];
+                cols.forEach(col => {
+                    // Escape quotes and wrap in quotes
+                    let text = col.textContent.replace(/"/g, '""');
+                    rowData.push('"' + text + '"');
+                });
+                csv.push(rowData.join(','));
+            });
+
+            // Add BOM for Excel UTF-8 compatibility
+            const BOM = '\uFEFF';
+            const csvContent = BOM + csv.join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '{{ job_id }}_results.csv';
+            link.click();
+        }
+    </script>
+</body>
+</html>

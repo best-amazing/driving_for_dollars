@@ -1,0 +1,16 @@
+node_modules/
+.env
+*.traineddata
+*.wav
+*.csv
+!package.json
+!package-lock.json
+amazing-properties-*.json
+
+# multiskiptrace ignores
+multiskiptrace/venv/
+multiskiptrace/__pycache__/
+multiskiptrace/.env
+multiskiptrace/results/
+multiskiptrace/*.csv
+multiskiptrace/.DS_Store

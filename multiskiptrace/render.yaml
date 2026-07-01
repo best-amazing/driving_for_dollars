@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: skiptrace-web
+    env: python
+    repo: <YOUR GIT REPO URL>   # optional if connecting via dashboard
+    branch: main
+    plan: free                  # adjust as needed
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app -w ${WEB_CONCURRENCY:-1} -k gthread --threads 4 --timeout 120
+
+    envVars:
+      - key: ZENROWS_API_KEY
+        sync: false
+      - key: ZENROWS_WAIT_MS
+        value: "2000"
+      - key: HEARTBEAT_INTERVAL
+        value: "15.0"
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
