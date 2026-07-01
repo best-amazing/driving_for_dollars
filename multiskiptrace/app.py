@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 from collections import deque
 import concurrent.futures
 import hashlib
-from supabase import create_client, Client
 
 def rearrange_name(name_text: str) -> Tuple[str, str]:
     """
@@ -74,10 +73,12 @@ MIN_CONCURRENT_WORKERS = int(os.getenv("MIN_CONCURRENT_WORKERS", "1"))  # minimu
 # Job cleanup settings
 JOB_TTL_SECONDS = int(os.getenv("JOB_TTL_SECONDS", "3600"))  # Keep completed jobs for 1 hour (default)
 
-# Supabase configuration
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+# Local JSON storage — no external database required
+JOBS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'jobs')
+os.makedirs(JOBS_DIR, exist_ok=True)
+
+# Thread-safe lock for all local file I/O
+file_io_lock = threading.Lock()
 
 # Global dictionary to track the state of multiple processing jobs (in-memory)
 processing_jobs: Dict[str, Dict[str, Any]] = {}
@@ -1270,25 +1271,65 @@ def compute_csv_hash(file_bytes: bytes) -> str:
     return hashlib.sha256(file_bytes).hexdigest()
 
 
+# ── Local JSON storage helpers ────────────────────────────────────────────────
+
+def _job_dir(job_id: str) -> str:
+    """Return the directory for a job's local files."""
+    return os.path.join(JOBS_DIR, job_id)
+
+
+def _job_file(job_id: str) -> str:
+    return os.path.join(_job_dir(job_id), 'job.json')
+
+
+def _results_file(job_id: str) -> str:
+    return os.path.join(_job_dir(job_id), 'results.json')
+
+
+def _scraped_urls_file() -> str:
+    """Global scraped-URL deduplication file (shared across all jobs)."""
+    return os.path.join(JOBS_DIR, 'scraped_urls.json')
+
+
+def _read_json(path: str, default=None):
+    """Read a JSON file; return `default` if missing or invalid."""
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return default if default is not None else {}
+
+
+def _write_json(path: str, data) -> None:
+    """Atomically write `data` as JSON to `path`."""
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, default=str)
+
+
+# ── Supabase-compatible API (now backed by local JSON files) ──────────────────
+
 def check_existing_job(csv_hash: str) -> Optional[Dict[str, Any]]:
     """Check if a job with the same CSV hash exists and is resumable."""
-    if not supabase:
+    if not os.path.exists(JOBS_DIR):
         return None
     try:
-        response = supabase.table('jobs').select('*').eq('csv_hash', csv_hash).eq('status', 'in_progress').execute()
-        if response.data:
-            return response.data[0]
+        for job_id in os.listdir(JOBS_DIR):
+            jf = _job_file(job_id)
+            if os.path.isfile(jf):
+                job_data = _read_json(jf)
+                if job_data.get('csv_hash') == csv_hash and job_data.get('status') == 'in_progress':
+                    return job_data
     except Exception as e:
         logger.error(f"Error checking existing job: {e}")
     return None
 
 
 def create_job_in_supabase(job_id: str, csv_hash: str, total_rows: int) -> bool:
-    """Create a new job entry in Supabase."""
-    if not supabase:
-        return False
+    """Create a new job entry in the local jobs directory."""
     try:
-        supabase.table('jobs').insert({
+        job_dir = _job_dir(job_id)
+        os.makedirs(job_dir, exist_ok=True)
+        job_data = {
             'job_id': job_id,
             'csv_hash': csv_hash,
             'status': 'in_progress',
@@ -1302,93 +1343,89 @@ def create_job_in_supabase(job_id: str, csv_hash: str, total_rows: int) -> bool:
                 'emails_found': 0,
                 'addresses_found': 0
             }
-        }).execute()
+        }
+        _write_json(_job_file(job_id), job_data)
+        # Initialise an empty results list for this job
+        _write_json(_results_file(job_id), [])
         return True
     except Exception as e:
-        logger.error(f"Error creating job in Supabase: {e}")
+        logger.error(f"Error creating job locally: {e}")
         return False
 
 
 def update_job_progress(job_id: str, current_row: int, stats: Dict[str, Any]):
-    """Update job progress in Supabase."""
-    if not supabase:
-        return
+    """Update job progress in the local job.json file."""
     try:
-        supabase.table('jobs').update({
-            'current_row': current_row,
-            'stats': stats,
-            'updated_at': datetime.now(timezone.utc).isoformat()
-        }).eq('job_id', job_id).execute()
+        with file_io_lock:
+            job_data = _read_json(_job_file(job_id))
+            job_data['current_row'] = current_row
+            job_data['stats'] = stats
+            job_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+            _write_json(_job_file(job_id), job_data)
     except Exception as e:
         logger.error(f"Error updating job progress: {e}")
 
 
 def save_result_to_supabase(job_id: str, row_index: int, result_data: Dict[str, Any]):
-    """Save result row to Supabase."""
-    if not supabase:
-        return
+    """Append a result row to the local results.json file (thread-safe)."""
     try:
-        supabase.table('results').insert({
-            'job_id': job_id,
-            'row_index': row_index,
-            'data': result_data,
-            'created_at': datetime.now(timezone.utc).isoformat()
-        }).execute()
+        results_path = _results_file(job_id)
+        with file_io_lock:
+            results = _read_json(results_path, default=[])
+            results.append({'row_index': row_index, 'data': result_data})
+            _write_json(results_path, results)
     except Exception as e:
-        logger.error(f"Error saving result to Supabase: {e}")
+        logger.error(f"Error saving result locally: {e}")
 
 
 def complete_job_in_supabase(job_id: str, status: str = 'completed'):
-    """Mark job as completed or cancelled in Supabase."""
-    if not supabase:
-        return
+    """Mark job as completed or cancelled in the local job.json file."""
     try:
-        supabase.table('jobs').update({
-            'status': status,
-            'completed_at': datetime.now(timezone.utc).isoformat()
-        }).eq('job_id', job_id).execute()
+        with file_io_lock:
+            job_data = _read_json(_job_file(job_id))
+            job_data['status'] = status
+            job_data['completed_at'] = datetime.now(timezone.utc).isoformat()
+            _write_json(_job_file(job_id), job_data)
     except Exception as e:
-        logger.error(f"Error completing job in Supabase: {e}")
+        logger.error(f"Error completing job locally: {e}")
 
 
 def compute_url_hash(url: str) -> str:
-    """Compute SHA256 hash of URL for fast lookups."""
+    """Compute SHA256 hash of a URL for fast lookups."""
     return hashlib.sha256(url.encode('utf-8')).hexdigest()
 
 
 def check_url_exists(url: str) -> bool:
-    """Check if a URL has already been scraped using the scraped_urls table."""
-    if not supabase:
-        return False
+    """Check if a URL has already been scraped (global scraped_urls.json)."""
     try:
+        scraped = _read_json(_scraped_urls_file(), default=[])
         url_hash = compute_url_hash(url)
-        response = supabase.table('scraped_urls').select('id').eq('url_hash', url_hash).limit(1).execute()
-        return len(response.data) > 0
+        return any(item.get('url_hash') == url_hash for item in scraped)
     except Exception as e:
         logger.error(f"Error checking URL existence: {e}")
         return False
 
 
 def check_urls_batch(urls: List[str]) -> set:
-    """Check multiple URLs at once and return the set of already scraped URLs."""
-    if not supabase or not urls:
+    """Check multiple URLs and return the set of already-scraped ones."""
+    if not urls:
         return set()
     try:
-        url_hashes = [compute_url_hash(url) for url in urls]
-        response = supabase.table('scraped_urls').select('url').in_('url_hash', url_hashes).execute()
-        return set(item['url'] for item in response.data)
+        scraped = _read_json(_scraped_urls_file(), default=[])
+        scraped_hashes = {item.get('url_hash') for item in scraped}
+        return {url for url in urls if compute_url_hash(url) in scraped_hashes}
     except Exception as e:
         logger.error(f"Error checking URLs batch: {e}")
         return set()
 
 
 def save_scraped_url(url: str, platform: str, first_name: str = '', last_name: str = '', job_id: str = ''):
-    """Save a scraped URL to the scraped_urls table for future deduplication."""
-    if not supabase or not url:
+    """Save a scraped URL to the global scraped_urls.json for future deduplication."""
+    if not url:
         return
     try:
         url_hash = compute_url_hash(url)
-        supabase.table('scraped_urls').insert({
+        entry = {
             'url': url,
             'url_hash': url_hash,
             'platform': platform,
@@ -1396,27 +1433,28 @@ def save_scraped_url(url: str, platform: str, first_name: str = '', last_name: s
             'last_name': last_name,
             'job_id': job_id,
             'created_at': datetime.now(timezone.utc).isoformat()
-        }).execute()
+        }
+        with file_io_lock:
+            scraped_path = _scraped_urls_file()
+            scraped = _read_json(scraped_path, default=[])
+            if not any(item.get('url_hash') == url_hash for item in scraped):
+                scraped.append(entry)
+                _write_json(scraped_path, scraped)
     except Exception as e:
-        # Ignore duplicate key errors (URL already exists)
-        if 'duplicate' not in str(e).lower() and 'unique' not in str(e).lower():
-            logger.error(f"Error saving scraped URL: {e}")
+        logger.error(f"Error saving scraped URL: {e}")
 
 
 def get_scraped_urls_count() -> Dict[str, int]:
-    """Get count of scraped URLs by platform."""
-    if not supabase:
-        return {}
+    """Get count of scraped URLs by platform from the global scraped_urls.json."""
+    counts: Dict[str, int] = {}
     try:
-        response = supabase.table('scraped_urls').select('platform').execute()
-        counts = {}
-        for item in response.data:
+        scraped = _read_json(_scraped_urls_file(), default=[])
+        for item in scraped:
             platform = item.get('platform', 'unknown')
             counts[platform] = counts.get(platform, 0) + 1
-        return counts
     except Exception as e:
         logger.error(f"Error getting scraped URLs count: {e}")
-        return {}
+    return counts
 
 
 # run a quick test at startup (safe to ignore failure)
@@ -1638,13 +1676,6 @@ def process_single_row(row_data: Tuple[int, Dict[str, Any], str, str]) -> Option
     global zenrows_credits_exhausted
     with zenrows_credits_lock:
         if zenrows_credits_exhausted:
-            return None
-
-    # Check if this row has already been processed
-    if supabase:
-        existing_results = supabase.table('results').select('id').eq('job_id', job_id).eq('row_index', row_index).limit(1).execute()
-        if existing_results.data:
-            # Row already processed, skip
             return None
 
     # Extract address data
@@ -1952,26 +1983,17 @@ def stream(job_id):
         last_sent = time.time()
 
         if job_id not in processing_jobs:
-            # Check Supabase if not in memory
-            if supabase:
-                try:
-                    response = supabase.table('jobs').select('*').eq('job_id', job_id).execute()
-                    if response.data:
-                        job_data = response.data[0]
-                        if job_data['status'] == 'in_progress':
-                            # Job was in progress but server restarted, mark as error
-                            complete_job_in_supabase(job_id, 'error')
-                            yield f"data: {json.dumps({'type':'error','message':'Processing was interrupted due to server restart. Please check your results.'})}\n\n"
-                        else:
-                            # Job completed or cancelled
-                            yield f"data: {json.dumps({'type':'complete','message':'Job is not currently active.'})}\n\n"
-                    else:
-                        yield f"data: {json.dumps({'type':'error','message':'Invalid job_id'})}\n\n"
-                except Exception as e:
-                    logger.error(f"Error fetching job from Supabase: {e}")
-                    yield f"data: {json.dumps({'type':'error','message':'Invalid job_id'})}\n\n"
+            # Check local job file for completed/interrupted jobs
+            local_job_file = _job_file(job_id)
+            if os.path.exists(local_job_file):
+                local_job = _read_json(local_job_file)
+                if local_job.get('status') == 'in_progress':
+                    complete_job_in_supabase(job_id, 'error')
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Processing was interrupted. Please check your results.'})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'type': 'complete', 'message': 'Job is not currently active.'})}\n\n"
             else:
-                yield f"data: {json.dumps({'type':'error','message':'Invalid job_id'})}\n\n"
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid job_id'})}\n\n"
             return
 
         while True:
@@ -2019,20 +2041,20 @@ def cancel_processing():
 
 @app.route('/download/<job_id>')
 def download_file(job_id):
-    if not supabase:
-        return jsonify({'error': 'Database not available'}), 500
+    results_path = _results_file(job_id)
+    if not os.path.exists(results_path):
+        return jsonify({'error': 'No results found for this job'}), 404
 
     try:
-        # Fetch results from Supabase
-        response = supabase.table('results').select('data').eq('job_id', job_id).order('row_index').execute()
-        if not response.data:
+        results = _read_json(results_path, default=[])
+        if not results:
             return jsonify({'error': 'No results found for this job'}), 404
 
         # Process data to split phone numbers into separate columns
         processed_data = []
         max_phones = 0
 
-        for result in response.data:
+        for result in results:
             data = result['data'].copy()
             phones = data.get('phones', [])
             if not phones and 'Phone Number(s)' in data:
@@ -2042,27 +2064,22 @@ def download_file(job_id):
             # Update max phones count
             max_phones = max(max_phones, len(phones))
 
-            # Create new data dict with only required columns
+            # Build filtered output row
             filtered_data = {}
-
-            # Add required fields in desired order: Property first, then Owner, then Phones
-            # Construct address as "Address, City, State"
             address = data.get('Address', '') or data.get('address', '')
             city = data.get('City', '') or data.get('city', '')
             state = data.get('State', '') or data.get('state', '')
             filtered_data['Property'] = f"{address}, {city}, {state}".strip(', ')
-            # Combine first and last name into single Owner column
             first_name = data.get("Owner's First Name", '').strip()
             last_name = data.get("Owner's Last Name", '').strip()
             filtered_data['Owner'] = f"{first_name} {last_name}".strip()
 
-            # Add individual phone columns
             for i, phone in enumerate(phones):
-                filtered_data[f'Phone Number({i+1})'] = clean_phone_number(phone)
+                filtered_data[f'Phone Number({i + 1})'] = clean_phone_number(phone)
 
             processed_data.append(filtered_data)
 
-        # Ensure all rows have the same number of phone columns (fill with empty strings)
+        # Ensure all rows have the same number of phone columns
         for data in processed_data:
             for i in range(1, max_phones + 1):
                 if f'Phone Number({i})' not in data:
@@ -2099,21 +2116,17 @@ def get_status(job_id):
             'stats': job['stats']
         })
 
-    # Check Supabase if not in memory
-    if supabase:
-        try:
-            response = supabase.table('jobs').select('*').eq('job_id', job_id).execute()
-            if response.data:
-                job_data = response.data[0]
-                return jsonify({
-                    'active': False,  # Not active since not in memory
-                    'cancelled': job_data['status'] == 'cancelled',
-                    'current_row': job_data['current_row'],
-                    'total_rows': job_data['total_rows'],
-                    'stats': job_data['stats']
-                })
-        except Exception as e:
-            logger.error(f"Error fetching job from Supabase: {e}")
+    # Fall back to local job file
+    job_file_path = _job_file(job_id)
+    if os.path.exists(job_file_path):
+        job_data = _read_json(job_file_path)
+        return jsonify({
+            'active': False,
+            'cancelled': job_data.get('status') == 'cancelled',
+            'current_row': job_data.get('current_row', 0),
+            'total_rows': job_data.get('total_rows', 0),
+            'stats': job_data.get('stats', {})
+        })
 
     return jsonify({'error': 'Invalid job ID'}), 404
 
@@ -2134,31 +2147,34 @@ def datetimeformat(value, format='%Y-%m-%d %H:%M:%S'):
 
 @app.route('/downloads')
 def list_downloads():
-    if not supabase:
-        return "Database not available", 500
-
     try:
-        # Fetch all jobs from Supabase (including in_progress)
-        response = supabase.table('jobs').select('job_id, created_at, status, total_rows, stats, current_row').order('created_at', desc=True).execute()
         files = []
-        for job in response.data:
-            # Get result count from Supabase
-            result_count = 0
-            try:
-                count_response = supabase.table('results').select('id', count='exact').eq('job_id', job['job_id']).execute()
-                result_count = count_response.count if hasattr(count_response, 'count') else 0
-            except:
-                pass
-
-            files.append({
-                'name': f"{job['job_id']}_results.csv",
-                'job_id': job['job_id'],
-                'creation_time': job['created_at'],  # This is ISO string, template filter will handle it
-                'status': job['status'],
-                'total_rows': job.get('total_rows', 0),
-                'result_count': result_count,
-                'stats': job.get('stats', {})
-            })
+        if os.path.exists(JOBS_DIR):
+            job_ids = sorted(
+                [d for d in os.listdir(JOBS_DIR) if os.path.isdir(os.path.join(JOBS_DIR, d))],
+                reverse=True
+            )
+            for job_id in job_ids:
+                jf = _job_file(job_id)
+                if not os.path.exists(jf):
+                    continue
+                job_data = _read_json(jf)
+                result_count = 0
+                rp = _results_file(job_id)
+                if os.path.exists(rp):
+                    try:
+                        result_count = len(_read_json(rp, default=[]))
+                    except Exception:
+                        pass
+                files.append({
+                    'name': f"{job_id}_results.csv",
+                    'job_id': job_id,
+                    'creation_time': job_data.get('created_at', ''),
+                    'status': job_data.get('status', 'unknown'),
+                    'total_rows': job_data.get('total_rows', 0),
+                    'result_count': result_count,
+                    'stats': job_data.get('stats', {})
+                })
         return render_template('download_jobs.html', files=files)
     except Exception as e:
         logger.exception(f"Error fetching jobs list: {e}")
@@ -2167,42 +2183,37 @@ def list_downloads():
 
 @app.route('/preview/<job_id>')
 def preview_job(job_id):
-    if not supabase:
-        return jsonify({'error': 'Database not available'}), 500
+    results_path = _results_file(job_id)
+    if not os.path.exists(results_path):
+        return jsonify({'error': 'No results found for this job'}), 404
 
     try:
-        # Fetch ALL results from Supabase (no limit)
-        response = supabase.table('results').select('data').eq('job_id', job_id).order('row_index').execute()
-        if not response.data:
+        results = _read_json(results_path, default=[])
+        if not results:
             return jsonify({'error': 'No results found for this job'}), 404
 
-        # Process data to split phone numbers into separate columns
         processed_data = []
         max_phones = 0
 
-        for result in response.data:
+        for result in results:
             data = result['data'].copy()
             phones = data.get('phones', [])
             if not phones and 'Phone Number(s)' in data:
                 phones_str = data['Phone Number(s)']
                 phones = [p.strip() for p in phones_str.split(';') if p.strip()]
 
-            # Update max phones count
             max_phones = max(max_phones, len(phones))
 
-            # Remove the combined phone columns
             if 'phones' in data:
                 del data['phones']
             if 'Phone Number(s)' in data:
                 del data['Phone Number(s)']
 
-            # Add individual phone columns
             for i, phone in enumerate(phones):
-                data[f'Phone Number({i+1})'] = clean_phone_number(phone)
+                data[f'Phone Number({i + 1})'] = clean_phone_number(phone)
 
             processed_data.append(data)
 
-        # Ensure all rows have the same number of phone columns (fill with empty strings)
         for data in processed_data:
             for i in range(1, max_phones + 1):
                 if f'Phone Number({i})' not in data:
@@ -2223,42 +2234,37 @@ def preview_job(job_id):
 
 @app.route('/view/<job_id>')
 def view_job(job_id):
-    if not supabase:
-        return "Database not available", 500
+    results_path = _results_file(job_id)
+    if not os.path.exists(results_path):
+        return "No results found", 404
 
     try:
-        # Fetch all results from Supabase
-        response = supabase.table('results').select('data').eq('job_id', job_id).order('row_index').execute()
-        if not response.data:
+        results = _read_json(results_path, default=[])
+        if not results:
             return "No results found", 404
 
-        # Process data to split phone numbers into separate columns
         processed_data = []
         max_phones = 0
 
-        for result in response.data:
+        for result in results:
             data = result['data'].copy()
             phones = data.get('phones', [])
             if not phones and 'Phone Number(s)' in data:
                 phones_str = data['Phone Number(s)']
                 phones = [p.strip() for p in phones_str.split(';') if p.strip()]
 
-            # Update max phones count
             max_phones = max(max_phones, len(phones))
 
-            # Remove the combined phone columns
             if 'phones' in data:
                 del data['phones']
             if 'Phone Number(s)' in data:
                 del data['Phone Number(s)']
 
-            # Add individual phone columns
             for i, phone in enumerate(phones):
-                data[f'Phone Number({i+1})'] = clean_phone_number(phone)
+                data[f'Phone Number({i + 1})'] = clean_phone_number(phone)
 
             processed_data.append(data)
 
-        # Ensure all rows have the same number of phone columns (fill with empty strings)
         for data in processed_data:
             for i in range(1, max_phones + 1):
                 if f'Phone Number({i})' not in data:
