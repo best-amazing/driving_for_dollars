@@ -1,0 +1,17 @@
+{
+  "job_id": "job_1782935589_1395",
+  "csv_hash": "51f4d0d9d89baad46f5992b7851c26c9842d27fd45f02abed3b852f8cd90ae41",
+  "status": "completed",
+  "total_rows": 697,
+  "current_row": 161,
+  "created_at": "2026-07-01T19:53:09.235758+00:00",
+  "stats": {
+    "addresses_processed": 165,
+    "people_found": 74,
+    "phones_found": 46,
+    "emails_found": 0,
+    "addresses_found": 0
+  },
+  "updated_at": "2026-07-01T20:09:03.377313+00:00",
+  "completed_at": "2026-07-01T20:09:03.379089+00:00"
+}

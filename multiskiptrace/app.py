@@ -1678,22 +1678,38 @@ def process_single_row(row_data: Tuple[int, Dict[str, Any], str, str]) -> Option
         if zenrows_credits_exhausted:
             return None
 
-    # Extract address data
-    address = row.get('Address', '') or row.get('address', '')
+    # Extract address data — support multiple column name formats
+    # Log available columns for debugging (only on first row)
+    if row_index == 0:
+        logger.info(f"[CSV DEBUG] Row keys (columns): {list(row.keys())}")
+        logger.info(f"[CSV DEBUG] First row values: { {k: v[:50] if isinstance(v, str) and len(v) > 50 else v for k, v in row.items()} }")
+
+    # Build address: prefer 'Address', then 'Full Address', then 'House Number' + 'Street Name'
+    address = (row.get('Address', '') or row.get('address', '')
+               or row.get('Full Address', '') or row.get('full address', ''))
+    if not address:
+        house_num = row.get('House Number', '') or row.get('house number', '')
+        street_name = row.get('Street Name', '') or row.get('street name', '')
+        if house_num and street_name:
+            address = f"{house_num} {street_name}".strip()
+
     city = row.get('City', '') or row.get('city', '')
     state = row.get('State', '') or row.get('state', '')
-    zip_code = row.get('Zip', '') or row.get('zip', '')
+    zip_code = (row.get('Zip', '') or row.get('zip', '')
+                or row.get('ZIP', '') or row.get('Zip Code', '') or row.get('zip_code', ''))
     county = row.get('County', '') or row.get('county', '')
-    owner_name = row.get('Owner Name', '')
+    owner_name = row.get('Owner Name', '') or row.get('owner name', '') or row.get('Owner', '') or ''
     row_platform = row.get('Platform', '').lower().strip() or platform
+
+    logger.info(f"[ROW {row_index + 1}] Extracted => address='{address}', city='{city}', state='{state}', zip='{zip_code}', county='{county}', owner='{owner_name}', platform='{row_platform}'")
 
     # If Owner Name is empty, we still proceed with address-only skip tracing
     # The process_address method will handle the fallback to address-only search
     if not owner_name.strip():
-        logger.info(f"Owner Name is empty for row {row_index + 1}, proceeding with address-only skip tracing")
+        logger.info(f"[ROW {row_index + 1}] Owner Name is empty, proceeding with address-only skip tracing")
 
     if address and city and state:
-        logger.info(f"Processing {row_index + 1}: {address}, {city}, {state} {zip_code}")
+        logger.info(f"[ROW {row_index + 1}] Processing: {address}, {city}, {state} {zip_code}")
 
         # Thread-safe progress update
         with job_results_lock:
@@ -1711,8 +1727,10 @@ def process_single_row(row_data: Tuple[int, Dict[str, Any], str, str]) -> Option
         row_tracer = SkipTracer(ZENROWS_API_KEY, row_platform, job_id)
         people_data = row_tracer.process_address(row, row_index, job_id, address, city, state, zip_code, county, owner_name, set())
 
+        logger.info(f"[ROW {row_index + 1}] process_address returned {len(people_data) if people_data else 0} results")
         return {'row_index': row_index, 'processed': True}
     else:
+        logger.warning(f"[ROW {row_index + 1}] SKIPPED — missing required fields: address='{address}', city='{city}', state='{state}'")
         # Empty result for missing fields
         result_row = row.copy()
         result_row["Owner's First Name"] = ''
@@ -1838,6 +1856,14 @@ def upload_file():
                 return
 
             job['total_rows'] = len(rows)
+
+            # Log CSV structure for debugging
+            logger.info(f"[CSV PARSE] Total rows parsed: {len(rows)}")
+            if rows:
+                logger.info(f"[CSV PARSE] Column headers: {list(rows[0].keys())}")
+                logger.info(f"[CSV PARSE] Sample row 0: {dict(list(rows[0].items())[:8])}")
+            else:
+                logger.warning(f"[CSV PARSE] No rows found in CSV!")
 
             # If no rows, finish early
             if job['total_rows'] == 0:
